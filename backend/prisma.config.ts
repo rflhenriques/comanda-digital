@@ -1,0 +1,1 @@
+module.exports = { migrate: { databaseUrl: process.env.DATABASE_URL } };

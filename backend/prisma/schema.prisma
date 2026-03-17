@@ -1,0 +1,143 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -------------------------------------------------
+// TABELAS BASE (CADASTROS)
+// -------------------------------------------------
+
+model Restaurante {
+  id            String   @id @default(uuid())
+  nome_fantasia String
+  cnpj          String   @unique
+  ativo         Boolean  @default(true)
+  criado_em     DateTime @default(now())
+
+  // Relacionamentos (O que pertence ao restaurante)
+  usuarios      Usuario[]
+  produtos      Produto[]
+  mesas         Mesa[]
+  comandas      Comanda[]
+
+  @@map("restaurantes")
+}
+
+enum Cargo {
+  GARCOM
+  CAIXA
+  GERENTE
+  COZINHA
+}
+
+model Usuario {
+  id             String      @id @default(uuid())
+  nome           String
+  email          String      @unique
+  senha_hash     String
+  cargo          Cargo       @default(GARCOM)
+  criado_em      DateTime    @default(now())
+
+  // Relacionamento: Este usuário trabalha em 1 restaurante
+  restaurante_id String
+  restaurante    Restaurante @relation(fields: [restaurante_id], references: [id])
+
+  @@map("usuarios")
+}
+
+model Cliente {
+  id        String   @id @default(uuid())
+  cpf       String   @unique
+  nome      String
+  telefone  String?  // O "?" significa que é opcional
+  criado_em DateTime @default(now())
+
+  // Relacionamento: Um cliente pode ter várias comandas ao longo do tempo
+  comandas  Comanda[]
+
+  @@map("clientes")
+}
+
+model Produto {
+  id               String      @id @default(uuid())
+  nome             String
+  preco            Decimal     @db.Decimal(10, 2) // Para lidar com dinheiro corretamente
+  categoria        String
+  controla_estoque Boolean     @default(true)
+  criado_em        DateTime    @default(now())
+
+  restaurante_id   String
+  restaurante      Restaurante @relation(fields: [restaurante_id], references: [id])
+  itens_comanda    ItemComanda[]
+
+  @@map("produtos")
+}
+
+model Mesa {
+  id             String      @id @default(uuid())
+  numero         Int
+  qr_code_url    String?
+  
+  restaurante_id String
+  restaurante    Restaurante @relation(fields: [restaurante_id], references: [id])
+  comandas       Comanda[]
+
+  @@map("mesas")
+}
+
+// -------------------------------------------------
+// TABELAS DE MOVIMENTAÇÃO (O FLUXO DE VENDA)
+// -------------------------------------------------
+
+enum StatusComanda {
+  ABERTA
+  PAGA
+  CANCELADA
+}
+
+model Comanda {
+  id             String        @id @default(uuid())
+  status         StatusComanda @default(ABERTA)
+  aberta_em      DateTime      @default(now())
+  fechada_em     DateTime?     // Nulo até o cliente pagar
+
+  restaurante_id String
+  restaurante    Restaurante   @relation(fields: [restaurante_id], references: [id])
+  
+  cliente_id     String
+  cliente        Cliente       @relation(fields: [cliente_id], references: [id])
+  
+  mesa_id        String?       // Opcional (o cliente pode estar no balcão)
+  mesa           Mesa?         @relation(fields: [mesa_id], references: [id])
+
+  itens          ItemComanda[]
+
+  @@map("comandas")
+}
+
+enum StatusPreparo {
+  FILA
+  PREPARANDO
+  PRONTO
+  ENTREGUE
+}
+
+model ItemComanda {
+  id             String        @id @default(uuid())
+  quantidade     Int           @default(1)
+  observacao     String?       // Ex: "Sem cebola"
+  status_preparo StatusPreparo @default(FILA)
+  pedido_em      DateTime      @default(now())
+
+  comanda_id     String
+  comanda        Comanda       @relation(fields: [comanda_id], references: [id])
+
+  produto_id     String
+  produto        Produto       @relation(fields: [produto_id], references: [id])
+
+  @@map("itens_comanda")
+}
