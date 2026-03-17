@@ -95,6 +95,7 @@ model Mesa {
 
 enum StatusComanda {
   ABERTA
+  AGUARDANDO_PAGAMENTO  
   PAGA
   CANCELADA
 }
