@@ -8,9 +8,11 @@ import { ProdutosModule } from './produtos/produtos.module';
 import { MesasModule } from './mesas/mesas.module';
 import { ComandasModule } from './comandas/comandas.module';
 import { ItensModule } from './itens/itens.module';
+import { UsuariosModule } from './usuarios/usuarios.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
-  imports: [RestaurantesModule, ClientesModule, ProdutosModule, MesasModule, ComandasModule, ItensModule],
+  imports: [RestaurantesModule, ClientesModule, ProdutosModule, MesasModule, ComandasModule, ItensModule, UsuariosModule, AuthModule],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })
