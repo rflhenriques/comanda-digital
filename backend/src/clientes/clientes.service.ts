@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { CreateClienteDto } from './dto/create-cliente.dto';
-import { UpdateClienteDto } from './dto/update-cliente.dto'; // Adicione este import
+import { UpdateClienteDto } from './dto/update-cliente.dto';
 import { PrismaService } from '../prisma.service';
 
 @Injectable()

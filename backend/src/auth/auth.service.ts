@@ -32,7 +32,7 @@ export class AuthService{
         };
 
         return {
-            acess_token: await this.jwtService.signAsync(payload),
+            access_token: await this.jwtService.signAsync(payload),
             usuario: {
                 id: usuario.id,
                 nome: usuario.nome,

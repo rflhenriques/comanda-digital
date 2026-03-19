@@ -25,6 +25,8 @@ model Restaurante {
   comandas      Comanda[]
 
   @@map("restaurantes")
+
+  caixas Caixa[]
 }
 
 enum Cargo {
@@ -47,6 +49,10 @@ model Usuario {
   restaurante    Restaurante @relation(fields: [restaurante_id], references: [id])
 
   @@map("usuarios")
+
+  caixas Caixa[]
+
+  movimentacoes MovimentacaoCaixa[]
 }
 
 model Cliente {
@@ -141,4 +147,51 @@ model ItemComanda {
   produto        Produto       @relation(fields: [produto_id], references: [id])
 
   @@map("itens_comanda")
+}
+
+enum StatusCaixa {
+  ABERTO
+  FECHADO
+}
+
+model Caixa {
+  id              String      @id @default(uuid())
+  valor_inicial   Decimal     @db.Decimal(10, 2) // Dinheiro de troco para começar o dia
+  valor_final     Decimal?    @db.Decimal(10, 2) // Quanto tinha na gaveta na hora de ir embora
+  status          StatusCaixa @default(ABERTO)
+  aberto_em       DateTime    @default(now())
+  fechado_em      DateTime?
+
+  // Relações: Precisamos saber de qual restaurante é esse caixa e QUEM abriu ele
+  restaurante_id  String
+  restaurante     Restaurante @relation(fields: [restaurante_id], references: [id])
+  
+  usuario_id      String
+  usuario         Usuario     @relation(fields: [usuario_id], references: [id])
+
+  @@map("caixas")
+
+  movimentacoes MovimentacaoCaixa[]
+}
+
+enum TipoMovimentacao {
+  ENTRADA // Suprimento (Colocar troco)
+  SAIDA   // Sangria (Pagar despesas)
+}
+
+model MovimentacaoCaixa {
+  id          String           @id @default(uuid())
+  descricao   String           // Ex: "Pagamento do motoboy", "Troco extra"
+  valor       Decimal          @db.Decimal(10, 2)
+  tipo        TipoMovimentacao
+  criado_em   DateTime         @default(now())
+
+  // Relações: Precisamos saber em qual caixa isso aconteceu e QUEM fez
+  caixa_id    String
+  caixa       Caixa            @relation(fields: [caixa_id], references: [id])
+  
+  usuario_id  String
+  usuario     Usuario          @relation(fields: [usuario_id], references: [id])
+
+  @@map("movimentacoes_caixa")
 }
