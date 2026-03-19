@@ -1,43 +1,28 @@
-import { Controller, Post, Body, Param, Patch, UseGuards, Get } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, Patch, Param } from '@nestjs/common';
 import { ComandasService } from './comandas.service';
 import { CreateComandaDto } from './dto/create-comanda.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard'; 
-import { RolesGuard } from '../auth/roles.guard'; 
-import { Roles } from '../auth/roles.decorator'; 
-import { Cargo } from '@prisma/client'; 
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@UseGuards(JwtAuthGuard, RolesGuard) 
+@UseGuards(JwtAuthGuard)
 @Controller('comandas')
 export class ComandasController {
   constructor(private readonly comandasService: ComandasService) {}
 
   @Post()
-  @Roles(Cargo.GARCOM, Cargo.GERENTE)
-  create(@Body() createComandaDto: CreateComandaDto) {
-    return this.comandasService.create(createComandaDto);
+  abrirComanda(@Body() createComandaDto: CreateComandaDto, @Request() req) {
+    const restauranteId = req.user.restaurante_id;
+    return this.comandasService.abrirComanda(createComandaDto, restauranteId);
   }
 
-  @Get('restaurante/:id')
-  @Roles(Cargo.GARCOM, Cargo.CAIXA, Cargo.GERENTE)
-  findOpenByRestaurante(@Param('id') restauranteId: string) {
-    return this.comandasService.findOpenByRestaurante(restauranteId);
+  @Get('abertas')
+  listarAbertas(@Request() req) {
+    const restauranteId = req.user.restaurante_id;
+    return this.comandasService.listarAbertas(restauranteId);
   }
 
-  @Get(':id')
-  @Roles(Cargo.GARCOM, Cargo.CAIXA, Cargo.GERENTE) 
-  findOne(@Param('id') id: string) {
-    return this.comandasService.findOne(id);
-  }
-
-  @Patch(':id/fechar')
-  @Roles(Cargo.GARCOM, Cargo.GERENTE)
-  fecharConta(@Param('id') id: string) {
-    return this.comandasService.fecharConta(id);
-  }
-
-  @Patch(':id/pagar')
-  @Roles(Cargo.CAIXA, Cargo.GERENTE)
-  pagarConta(@Param('id') id: string) {
-    return this.comandasService.pagarConta(id);
+@Patch(':id/fechar')
+  fechar(@Param('id') id: string, @Request() req) {
+    const usuarioId = req.user.id || req.user.sub; 
+    return this.comandasService.fecharComanda(id, usuarioId);
   }
 }

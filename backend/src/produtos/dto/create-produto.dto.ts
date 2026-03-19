@@ -1,6 +1,6 @@
 export class CreateProdutoDto {
     nome: string;
+    descricao?: string;
     preco: number;
-    categoria: string;
-    restaurante_id: string;   
+    categoria_id: string;
 }

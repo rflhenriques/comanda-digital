@@ -11,9 +11,11 @@ import { ItensModule } from './itens/itens.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { AuthModule } from './auth/auth.module';
 import { CaixaModule } from './caixa/caixa.module';
+import { CategoriasModule } from './categorias/categorias.module';
+import { ItensComandaModule } from './itens-comanda/itens-comanda.module';
 
 @Module({
-  imports: [RestaurantesModule, ClientesModule, ProdutosModule, MesasModule, ComandasModule, ItensModule, UsuariosModule, AuthModule, CaixaModule],
+  imports: [RestaurantesModule, ClientesModule, ProdutosModule, MesasModule, ComandasModule, ItensModule, UsuariosModule, AuthModule, CaixaModule, CategoriasModule, ItensComandaModule],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })

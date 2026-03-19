@@ -1,40 +1,31 @@
-import { Injectable } from "@nestjs/common";
-import { CreateProdutoDto } from "./dto/create-produto.dto";
-import { PrismaService } from "../prisma.service";
-import { UpdateProdutoDto } from "./dto/update-produto.dto";
+import { Injectable } from '@nestjs/common';
+import { CreateProdutoDto } from './dto/create-produto.dto';
+import { PrismaService } from '../prisma.service';
 
 @Injectable()
 export class ProdutosService {
-  constructor(private prisma: PrismaService ) {}
+  constructor(private prisma: PrismaService) {}
 
-  async create(CreateProdutoDto: CreateProdutoDto){
+  create(createProdutoDto: CreateProdutoDto, restauranteId: string) {
     return this.prisma.produto.create({
-      data: CreateProdutoDto,
+      data: {
+        nome: createProdutoDto.nome,
+        descricao: createProdutoDto.descricao,
+        preco: createProdutoDto.preco,
+        categoria_id: createProdutoDto.categoria_id,
+        restaurante_id: restauranteId,
+      },
     });
   }
 
-  async findAll() {
-    return this.prisma.produto.findMany();
-  }
-
-  async findAllByRestaurante(restaurante_id: string){
+  findAll(restauranteId: string) {
     return this.prisma.produto.findMany({
-      where: {restaurante_id: restaurante_id}, 
+      where: {
+        restaurante_id: restauranteId,
+      },
+      include: {
+        categoria: true,
+      },
     });
-  }
-
-  async findOne(id: string) {
-    return this.prisma.produto.findUnique({where: { id }});
-  }
-
-  async update(id: string, updateProdutoDto: UpdateProdutoDto ) {
-    return this.prisma.produto.update({
-      where: { id },
-      data: updateProdutoDto, 
-    });
-  }
-
-  async remove ( id: string ){
-    return this.prisma.produto.delete({ where: { id }});
   }
 }
