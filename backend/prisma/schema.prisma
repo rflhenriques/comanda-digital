@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // -------------------------------------------------
@@ -195,8 +196,8 @@ model Comanda {
   restaurante_id String
   restaurante    Restaurante   @relation(fields: [restaurante_id], references: [id])
 
-  cliente_id     String
-  cliente        Cliente       @relation(fields: [cliente_id], references: [id])
+  cliente_id     String?       
+  cliente        Cliente?      @relation(fields: [cliente_id], references: [id])
 
   mesa_id        String?
   mesa           Mesa?         @relation(fields: [mesa_id], references: [id])
