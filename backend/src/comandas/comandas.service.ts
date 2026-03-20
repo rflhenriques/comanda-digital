@@ -20,22 +20,21 @@ export class ComandasService {
       }
     }
 
+    const dadosDaComanda: any = {
+      status: 'ABERTA',
+      restaurante: { connect: { id: restauranteId } },
+    };
+
+    if (dto.mesa_id) {
+      dadosDaComanda.mesa = { connect: { id: dto.mesa_id } };
+    }
+
+    if (dto.cliente_id) {
+      dadosDaComanda.cliente = { connect: { id: dto.cliente_id } };
+    }
+
     return this.prisma.comanda.create({
-      data: {
-        status: 'ABERTA',
-        // Vinculando o Restaurante usando o connect
-        restaurante: {
-          connect: { id: restauranteId }
-        },
-        // Vinculando a Mesa (se houver) usando o connect
-        mesa: dto.mesa_id 
-          ? { connect: { id: dto.mesa_id } } 
-          : undefined,
-        // Vinculando o Cliente (se houver) usando o connect
-        cliente: dto.cliente_id 
-          ? { connect: { id: dto.cliente_id } } 
-          : undefined,
-      },
+      data: dadosDaComanda,
     });
   }
 
