@@ -13,9 +13,10 @@ import { AuthModule } from './auth/auth.module';
 import { CaixaModule } from './caixa/caixa.module';
 import { CategoriasModule } from './categorias/categorias.module';
 import { ItensComandaModule } from './itens-comanda/itens-comanda.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
-  imports: [RestaurantesModule, ClientesModule, ProdutosModule, MesasModule, ComandasModule, ItensModule, UsuariosModule, AuthModule, CaixaModule, CategoriasModule, ItensComandaModule],
+  imports: [RestaurantesModule, ClientesModule, ProdutosModule, MesasModule, ComandasModule, ItensModule, UsuariosModule, AuthModule, CaixaModule, CategoriasModule, ItensComandaModule, DashboardModule],
   controllers: [AppController],
   providers: [AppService, PrismaService],
 })

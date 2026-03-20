@@ -23,8 +23,9 @@ export class CaixaService {
     return this.prisma.caixa.create({
       data: {
         valor_inicial: createCaixaDto.valor_inicial,
-        usuario_id: usuarioId,
-        restaurante_id: restauranteId,
+        status: 'ABERTO',
+        restaurante: { connect: { id: restauranteId } },
+        usuario: { connect: { id: usuarioId } }, 
       },
     });
   }
@@ -101,7 +102,6 @@ export class CaixaService {
     });
 
     const valorInicial = Number(caixa.valor_inicial);
-    
     const saldoEsperado = valorInicial + totalEntradas - totalSaidas;
 
     return {

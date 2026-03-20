@@ -18,14 +18,13 @@ export class ProdutosService {
     });
   }
 
-  findAll(restauranteId: string) {
+  async findAll(restauranteId: string) {
     return this.prisma.produto.findMany({
       where: {
         restaurante_id: restauranteId,
+        ativo: true
       },
-      include: {
-        categoria: true,
-      },
+      include: { categoria: true }
     });
   }
 }

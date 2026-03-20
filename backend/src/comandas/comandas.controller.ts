@@ -20,9 +20,14 @@ export class ComandasController {
     return this.comandasService.listarAbertas(restauranteId);
   }
 
-@Patch(':id/fechar')
+  @Get(':id/conta')
+  obterConta(@Param('id') id: string) {
+    return this.comandasService.obterConta(id);
+  }
+
+  @Patch(':id/fechar')
   fechar(@Param('id') id: string, @Request() req) {
-    const usuarioId = req.user.id || req.user.sub; 
+    const usuarioId = req.user.userId;
     return this.comandasService.fecharComanda(id, usuarioId);
   }
 }

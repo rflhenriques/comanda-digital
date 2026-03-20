@@ -1,6 +1,19 @@
+import { IsNotEmpty, IsString, IsNumber, IsOptional } from 'class-validator';
+
 export class CreateItensComandaDto {
-    comanda_id: string;
-    produto_id: string;
-    quantidade: number;
-    observacao?: string;
+  @IsString()
+  @IsNotEmpty()
+  comanda_id: string;
+
+  @IsString()
+  @IsNotEmpty()
+  produto_id: string;
+
+  @IsNumber()
+  @IsNotEmpty()
+  quantidade: number;
+
+  @IsString()
+  @IsOptional()
+  observacao?: string;
 }

@@ -6,9 +6,14 @@ import { PrismaService } from '../prisma.service';
 export class ClientesService {
   constructor(private prisma: PrismaService) {}
 
-  async createOrFind(dto: CreateClienteDto) {
+ async createOrFind(dto: CreateClienteDto, restauranteId: string) {
     let cliente = await this.prisma.cliente.findUnique({
-      where: { cpf: dto.cpf },
+      where: {
+        cpf_restaurante_id: {
+          cpf: dto.cpf,
+          restaurante_id: restauranteId,
+        },
+      },
     });
 
     if (!cliente) {
@@ -17,6 +22,7 @@ export class ClientesService {
           cpf: dto.cpf,
           nome: dto.nome,
           telefone: dto.telefone,
+          restaurante_id: restauranteId,
         },
       });
     }

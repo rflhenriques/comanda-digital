@@ -48,26 +48,65 @@ export class ComandasService {
     });
   }
 
- async fecharComanda(id: string, usuarioId: string) {
+  async obterConta(id: string) {
     const comanda = await this.prisma.comanda.findUnique({
       where: { id },
-      include: { itens: { include: { produto: true } } },
+      include: {
+        mesa: true,
+        itens: { include: { produto: true } },
+      },
+    });
+
+    if (!comanda) throw new BadRequestException('Comanda não encontrada');
+
+    let subtotal = 0;
+
+    const extratoItens = comanda.itens.map((item) => {
+      const precoUnitario = Number(item.produto.preco); 
+      const totalItem = item.quantidade * precoUnitario;
+      subtotal += totalItem;
+
+      return {
+        produto: item.produto.nome,
+        quantidade: item.quantidade,
+        preco_unitario: precoUnitario,
+        total: totalItem,
+      };
+    });
+
+    const taxaServico = subtotal * 0.10;
+    const totalGeral = subtotal + taxaServico;
+
+    return {
+      comanda_id: comanda.id,
+      mesa: comanda.mesa ? comanda.mesa.numero : 'Balcão',
+      status: comanda.status,
+      itens: extratoItens,
+      resumo: { subtotal, taxa_servico: taxaServico, total_a_pagar: totalGeral },
+    };
+  }
+
+  async fecharComanda(id: string, usuarioId: string) {
+    const comanda = await this.prisma.comanda.findUnique({
+      where: { id },
+      include: { itens: { include: { produto: true } }, mesa: true },
     });
 
     if (!comanda || comanda.status !== 'ABERTA') {
       throw new BadRequestException('Comanda não encontrada ou já fechada.');
     }
 
-    const total = comanda.itens.reduce((acc, item) => {
+    const subtotal = comanda.itens.reduce((acc, item) => {
       return acc + (Number(item.produto.preco) * item.quantidade);
     }, 0);
+    const totalComTaxa = subtotal + (subtotal * 0.10);
 
     const caixa = await this.prisma.caixa.findFirst({
       where: { restaurante_id: comanda.restaurante_id, status: 'ABERTO' },
     });
 
     if (!caixa) {
-      throw new BadRequestException('Não há um caixa aberto!');
+      throw new BadRequestException('Não há um caixa aberto no momento!');
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -80,11 +119,11 @@ export class ComandasService {
         data: {
           caixa_id: caixa.id,
           usuario_id: usuarioId,
-          valor: total,
+          valor: totalComTaxa,
           tipo: 'ENTRADA',
-          descricao: `Recebimento Comanda - Mesa ${comanda.mesa_id ? 'Mesa' : 'Balcao'}`,
+          descricao: `Recebimento Comanda - ${comanda.mesa ? 'Mesa ' + comanda.mesa.numero : 'Balcão'}`,
         },
       });
     });
-  }
+  } 
 }

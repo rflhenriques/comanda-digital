@@ -2,10 +2,9 @@ import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { UsuariosService } from "../usuarios/usuarios.service";
 import * as bcrypt from 'bcrypt';
-import { Cargo } from "@prisma/client";
 
 @Injectable()
-export class AuthService{
+export class AuthService {
     constructor(
         private usuariosService: UsuariosService,
         private jwtService: JwtService
@@ -28,7 +27,7 @@ export class AuthService{
             sub: usuario.id,
             email: usuario.email,
             cargo: usuario.cargo,
-            restaurante_id: usuario.restaurante_id 
+            restaurante_id: usuario.restaurante_id
         };
 
         return {
@@ -36,8 +35,9 @@ export class AuthService{
             usuario: {
                 id: usuario.id,
                 nome: usuario.nome,
-                cargo: usuario.cargo
+                cargo: usuario.cargo,
+                restaurante_id: usuario.restaurante_id
             }
         };
     }
-} 
+}

@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { RestaurantesService } from './restaurantes.service';
 import { CreateRestauranteDto } from './dto/create-restaurante.dto';
 import { UpdateRestauranteDto } from './dto/update-restaurante.dto';
+import { Plano } from '@prisma/client';
 
 @Controller('restaurantes')
 export class RestaurantesController {
@@ -12,6 +13,14 @@ export class RestaurantesController {
     return this.restaurantesService.create(createRestauranteDto);
   }
 
+  @Patch(':id/plano')
+  upgrade(
+    @Param('id') id: string, 
+    @Body() body: { plano: Plano, limite: number }
+  ) {
+    return this.restaurantesService.atualizarPlano(id, body.plano, body.limite);
+  }
+
   @Get()
   findAll() {
     return this.restaurantesService.findAll();
@@ -19,16 +28,16 @@ export class RestaurantesController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.restaurantesService.findOne(+id);
+    return this.restaurantesService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateRestauranteDto: UpdateRestauranteDto) {
-    return this.restaurantesService.update(+id, updateRestauranteDto);
+    return this.restaurantesService.update(id, updateRestauranteDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.restaurantesService.remove(+id);
+    return this.restaurantesService.remove(id);
   }
 }

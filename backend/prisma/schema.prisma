@@ -12,21 +12,30 @@ datasource db {
 // -------------------------------------------------
 
 model Restaurante {
-  id            String   @id @default(uuid())
+  id            String    @id @default(uuid())
   nome_fantasia String
-  cnpj          String   @unique
-  ativo         Boolean  @default(true)
-  criado_em     DateTime @default(now())
+  cnpj          String    @unique
+  plano         Plano     @default(BASICO)
+  status        String    @default("ATIVO")
+  limite_mesas  Int       @default(10)
+  criado_em     DateTime  @default(now())
 
-  // Relacionamentos (O que pertence ao restaurante)
+  // Relacionamentos Reversos (Essencial para o Prisma)
   usuarios      Usuario[]
+  categorias    Categoria[]
   produtos      Produto[]
   mesas         Mesa[]
   comandas      Comanda[]
   caixas        Caixa[]
-  categorias    Categoria[]
+  clientes      Cliente[]
 
   @@map("restaurantes")
+}
+
+enum Plano {
+  BASICO
+  PRO
+  ENTERPRISE
 }
 
 enum Cargo {
@@ -44,7 +53,6 @@ model Usuario {
   cargo          Cargo       @default(GARCOM)
   criado_em      DateTime    @default(now())
 
-  // Relacionamento: Este usuário trabalha em 1 restaurante
   restaurante_id String
   restaurante    Restaurante @relation(fields: [restaurante_id], references: [id])
 
@@ -55,15 +63,18 @@ model Usuario {
 }
 
 model Cliente {
-  id        String   @id @default(uuid())
-  cpf       String   @unique
-  nome      String
-  telefone  String?  // O "?" significa que é opcional
-  criado_em DateTime @default(now())
+  id             String      @id @default(uuid())
+  cpf            String      // Removido @unique global para permitir o mesmo CPF em restaurantes diferentes (SaaS)
+  nome           String
+  telefone       String?
+  criado_em      DateTime    @default(now())
 
-  // Relacionamento: Um cliente pode ter várias comandas ao longo do tempo
-  comandas  Comanda[]
+  restaurante_id String
+  restaurante    Restaurante @relation(fields: [restaurante_id], references: [id])
+  
+  comandas       Comanda[]
 
+  @@unique([cpf, restaurante_id]) // CPF único POR restaurante
   @@map("clientes")
 }
 
@@ -71,7 +82,7 @@ model Mesa {
   id             String      @id @default(uuid())
   numero         Int
   qr_code_url    String?
-  
+
   restaurante_id String
   restaurante    Restaurante @relation(fields: [restaurante_id], references: [id])
   comandas       Comanda[]
@@ -89,41 +100,41 @@ enum StatusCaixa {
 }
 
 model Caixa {
-  id              String      @id @default(uuid())
-  valor_inicial   Decimal     @db.Decimal(10, 2)
-  valor_final     Decimal?    @db.Decimal(10, 2)
-  status          StatusCaixa @default(ABERTO)
-  aberto_em       DateTime    @default(now())
-  fechado_em      DateTime?
+  id             String            @id @default(uuid())
+  valor_inicial  Decimal           @db.Decimal(10, 2)
+  valor_final    Decimal?          @db.Decimal(10, 2)
+  status         StatusCaixa       @default(ABERTO)
+  aberto_em      DateTime          @default(now())
+  fechado_em     DateTime?
 
-  restaurante_id  String
-  restaurante     Restaurante @relation(fields: [restaurante_id], references: [id])
-  
-  usuario_id      String
-  usuario         Usuario     @relation(fields: [usuario_id], references: [id])
+  restaurante_id String
+  restaurante    Restaurante       @relation(fields: [restaurante_id], references: [id])
 
-  movimentacoes   MovimentacaoCaixa[]
+  usuario_id     String
+  usuario        Usuario           @relation(fields: [usuario_id], references: [id])
+
+  movimentacoes  MovimentacaoCaixa[]
 
   @@map("caixas")
 }
 
 enum TipoMovimentacao {
-  ENTRADA 
-  SAIDA   
+  ENTRADA
+  SAIDA
 }
 
 model MovimentacaoCaixa {
-  id          String           @id @default(uuid())
-  descricao   String           
-  valor       Decimal          @db.Decimal(10, 2)
-  tipo        TipoMovimentacao
-  criado_em   DateTime         @default(now())
+  id         String           @id @default(uuid())
+  descricao  String
+  valor      Decimal          @db.Decimal(10, 2)
+  tipo       TipoMovimentacao
+  criado_em  DateTime         @default(now())
 
-  caixa_id    String
-  caixa       Caixa            @relation(fields: [caixa_id], references: [id])
-  
-  usuario_id  String
-  usuario     Usuario          @relation(fields: [usuario_id], references: [id])
+  caixa_id   String
+  caixa      Caixa            @relation(fields: [caixa_id], references: [id])
+
+  usuario_id String
+  usuario    Usuario          @relation(fields: [usuario_id], references: [id])
 
   @@map("movimentacoes_caixa")
 }
@@ -134,31 +145,31 @@ model MovimentacaoCaixa {
 
 model Categoria {
   id             String      @id @default(uuid())
-  nome           String      // Ex: "Bebidas", "Pizzas"
+  nome           String
   criado_em      DateTime    @default(now())
 
   restaurante_id String
   restaurante    Restaurante @relation(fields: [restaurante_id], references: [id])
-  
-  produtos       Produto[]   
+
+  produtos       Produto[]
 
   @@map("categorias")
 }
 
 model Produto {
-  id             String      @id @default(uuid())
-  nome           String      // Ex: "Coca-Cola 2L"
-  descricao      String?     
-  preco          Decimal     @db.Decimal(10, 2)
-  ativo          Boolean     @default(true) 
-  criado_em      DateTime    @default(now())
+  id             String        @id @default(uuid())
+  nome           String
+  descricao      String?
+  preco          Decimal       @db.Decimal(10, 2)
+  ativo          Boolean       @default(true)
+  criado_em      DateTime      @default(now())
 
   categoria_id   String
-  categoria      Categoria   @relation(fields: [categoria_id], references: [id])
+  categoria      Categoria     @relation(fields: [categoria_id], references: [id])
 
   restaurante_id String
-  restaurante    Restaurante @relation(fields: [restaurante_id], references: [id])
-  
+  restaurante    Restaurante   @relation(fields: [restaurante_id], references: [id])
+
   itens          ItemComanda[]
 
   @@map("produtos")
@@ -170,7 +181,7 @@ model Produto {
 
 enum StatusComanda {
   ABERTA
-  AGUARDANDO_PAGAMENTO  
+  AGUARDANDO_PAGAMENTO
   PAGA
   CANCELADA
 }
@@ -179,15 +190,15 @@ model Comanda {
   id             String        @id @default(uuid())
   status         StatusComanda @default(ABERTA)
   aberta_em      DateTime      @default(now())
-  fechada_em     DateTime?     
+  fechada_em     DateTime?
 
   restaurante_id String
   restaurante    Restaurante   @relation(fields: [restaurante_id], references: [id])
-  
+
   cliente_id     String
   cliente        Cliente       @relation(fields: [cliente_id], references: [id])
-  
-  mesa_id        String?       
+
+  mesa_id        String?
   mesa           Mesa?         @relation(fields: [mesa_id], references: [id])
 
   itens          ItemComanda[]
@@ -205,7 +216,7 @@ enum StatusPreparo {
 model ItemComanda {
   id             String        @id @default(uuid())
   quantidade     Int           @default(1)
-  observacao     String?       // Ex: "Sem cebola"
+  observacao     String?
   status_preparo StatusPreparo @default(FILA)
   pedido_em      DateTime      @default(now())
 

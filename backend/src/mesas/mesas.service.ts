@@ -6,16 +6,23 @@ import { PrismaService } from '../prisma.service';
 export class MesasService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createMesaDto: CreateMesaDto, restauranteId: string) {
-    const mesaExiste = await this.prisma.mesa.findFirst({
-      where: {
-        numero: createMesaDto.numero,
-        restaurante_id: restauranteId,
-      },
+async create(createMesaDto: CreateMesaDto, restauranteId: string) {
+    const restaurante = await this.prisma.restaurante.findUnique({
+      where: { id: restauranteId }
     });
 
-    if (mesaExiste) {
-      throw new BadRequestException(`A Mesa número ${createMesaDto.numero} já existe neste restaurante!`);
+    if (!restaurante) {
+      throw new BadRequestException('Restaurante não encontrado.');
+    }
+
+    const totalMesas = await this.prisma.mesa.count({
+      where: { restaurante_id: restauranteId }
+    });
+
+    if (totalMesas >= restaurante.limite_mesas) {
+      throw new BadRequestException(
+        `Limite de mesas atingido para o plano ${restaurante.plano}. Faça upgrade para o plano PRO!`
+      );
     }
 
     return this.prisma.mesa.create({

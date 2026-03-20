@@ -2,21 +2,25 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { CreateItensComandaDto } from './dto/create-itens-comanda.dto';
 import { PrismaService } from '../prisma.service';
 import { StatusPreparo } from '@prisma/client';
+import { ComandasGateway } from '../comandas/comandas.gateway';
 
 @Injectable()
 export class ItensComandaService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private readonly gateway: ComandasGateway,
+  ) {}
 
   async adicionarItem(dto: CreateItensComandaDto) {
-    const comanda = await this.prisma.comanda.findUnique({
-      where: { id: dto.comanda_id },
-    });
+  if (!dto.comanda_id) {
+    throw new BadRequestException('O ID da comanda é obrigatório.');
+  }
 
-    if (!comanda || comanda.status !== 'ABERTA') {
-      throw new BadRequestException('Não é possível adicionar itens a uma comanda fechada ou inexistente!');
-    }
+  const comanda = await this.prisma.comanda.findUnique({
+    where: { id: dto.comanda_id },
+  });
 
-    return this.prisma.itemComanda.create({
+    const novoItem = await this.prisma.itemComanda.create({
       data: {
         comanda_id: dto.comanda_id,
         produto_id: dto.produto_id,
@@ -26,8 +30,13 @@ export class ItensComandaService {
       },
       include: {
         produto: true,
-      }
+        comanda: { include: { mesa: true } },
+      },
     });
+
+    this.gateway.notificarNovoPedido(novoItem.comanda.restaurante_id, novoItem);
+
+    return novoItem;
   }
 
   async removerItem(id: string) {
@@ -36,24 +45,32 @@ export class ItensComandaService {
     });
   }
 
-  listarParaCozinha(restauranteId:string) {
+  listarParaCozinha(restauranteId: string) {
     return this.prisma.itemComanda.findMany({
       where: {
-        comanda: { restaurante_id: restauranteId},
-        status_preparo: { in: ['FILA', 'PREPARANDO']}
+        comanda: { restaurante_id: restauranteId },
+        status_preparo: { in: ['FILA', 'PREPARANDO'] },
       },
       include: {
         produto: true,
-        comanda: { include: { mesa: true} }
+        comanda: { include: { mesa: true } },
       },
-      orderBy: { pedido_em: 'asc' }
+      orderBy: { pedido_em: 'asc' },
     });
   }
 
-  async atualizarStatus(id:string, status: StatusPreparo) {
-    return this.prisma.itemComanda.update ({
+  async atualizarStatus(id: string, status: StatusPreparo) {
+    const itemAtualizado = await this.prisma.itemComanda.update({
       where: { id },
-      data: { status_preparo: status}
+      data: { status_preparo: status },
+      include: {
+        produto: true,
+        comanda: { include: { mesa: true } },
+      },
     });
+
+    this.gateway.notificarPronto(itemAtualizado.comanda.restaurante_id, itemAtualizado);
+
+    return itemAtualizado;
   }
 }

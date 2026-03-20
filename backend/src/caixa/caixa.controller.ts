@@ -16,7 +16,7 @@ export class CaixaController {
   @Post('abrir')
   @Roles(Cargo.CAIXA, Cargo.GERENTE)
   abrirCaixa(@Body() createCaixaDto: CreateCaixaDto, @Request() req) {
-    const usuarioId = req.user.id;
+    const usuarioId = req.user.userId;
     const restauranteId = req.user.restaurante_id;
     return this.caixaService.abrirCaixa(createCaixaDto, usuarioId, restauranteId);
   }
@@ -31,9 +31,8 @@ export class CaixaController {
   @Post('movimento')
   @Roles(Cargo.CAIXA, Cargo.GERENTE)
   registrarMovimentacao(@Body() dto: CreateMovimentacaoDto, @Request() req) {
-    const usuarioId = req.user.id;
+    const usuarioId = req.user.userId;
     const restauranteId = req.user.restaurante_id;
-
     return this.caixaService.registrarMovimentacao(dto, usuarioId, restauranteId);
   }
 
