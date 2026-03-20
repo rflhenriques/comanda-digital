@@ -6,12 +6,12 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Cargo } from '@prisma/client';
 
-@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('produtos')
 export class ProdutosController {
   constructor(private readonly produtosService: ProdutosService) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Cargo.GERENTE)
   create(@Body() createProdutoDto: CreateProdutoDto, @Request() req) {
     const restauranteId = req.user.restaurante_id;
