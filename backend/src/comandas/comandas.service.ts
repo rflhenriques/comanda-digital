@@ -22,10 +22,19 @@ export class ComandasService {
 
     return this.prisma.comanda.create({
       data: {
-        cliente_id: dto.cliente_id,
-        mesa_id: dto.mesa_id,
-        restaurante_id: restauranteId,
         status: 'ABERTA',
+        // Vinculando o Restaurante usando o connect
+        restaurante: {
+          connect: { id: restauranteId }
+        },
+        // Vinculando a Mesa (se houver) usando o connect
+        mesa: dto.mesa_id 
+          ? { connect: { id: dto.mesa_id } } 
+          : undefined,
+        // Vinculando o Cliente (se houver) usando o connect
+        cliente: dto.cliente_id 
+          ? { connect: { id: dto.cliente_id } } 
+          : undefined,
       },
     });
   }

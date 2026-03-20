@@ -17,15 +17,17 @@ export class UsuariosService {
     }
 
     const saltRounds = 10;
-    const senhaCriptografada = await bcrypt.hash(createUsuarioDto. senha, saltRounds);
+    const senhaCriptografada = await bcrypt.hash(createUsuarioDto.senha, saltRounds);
 
-    const novoUsuario = await this.prisma.usuario.create ({
+    const novoUsuario = await this.prisma.usuario.create({
       data: {
         nome: createUsuarioDto.nome,
         email: createUsuarioDto.email,
         senha_hash: senhaCriptografada,
         cargo: createUsuarioDto.cargo,
-        restaurante_id: createUsuarioDto.restaurante_id
+        restaurante: {
+          connect: { id: createUsuarioDto.restaurante_id }
+        }
       },
     });
 
