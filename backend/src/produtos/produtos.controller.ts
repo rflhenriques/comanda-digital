@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, Query } from '@nestjs/common'; // Adicionei o Query aqui
 import { ProdutosService } from './produtos.service';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -19,9 +19,10 @@ export class ProdutosController {
   }
 
   @Get()
-  @Roles(Cargo.GERENTE, Cargo.CAIXA, Cargo.GARCOM)
-  findAll(@Request() req) {
-    const restauranteId = req.user.restaurante_id;
+  findAll(@Query('restaurante_id') restauranteId: string) {
+    if (!restauranteId) {
+      return [];
+    }
     return this.produtosService.findAll(restauranteId);
   }
 }
