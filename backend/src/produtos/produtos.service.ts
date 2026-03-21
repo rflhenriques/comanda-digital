@@ -6,7 +6,7 @@ import { PrismaService } from '../prisma.service';
 export class ProdutosService {
   constructor(private prisma: PrismaService) {}
 
-  create(createProdutoDto: CreateProdutoDto, restauranteId: string) {
+  async create(createProdutoDto: CreateProdutoDto, restauranteId: string) {
     return this.prisma.produto.create({
       data: {
         nome: createProdutoDto.nome,
@@ -14,17 +14,25 @@ export class ProdutosService {
         preco: createProdutoDto.preco,
         categoria_id: createProdutoDto.categoria_id,
         restaurante_id: restauranteId,
+        ativo: true,
       },
     });
   }
 
   async findAll(restauranteId: string) {
+    if (!restauranteId) return [];
+
     return this.prisma.produto.findMany({
       where: {
         restaurante_id: restauranteId,
-        ativo: true
+        ativo: true,
       },
-      include: { categoria: true }
+      include: {
+        categoria: true,
+      },
+      orderBy: {
+        nome: 'asc',
+      },
     });
   }
 }

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Query } from '@nestjs/common'; // Adicionei o Query aqui
+import { Controller, Get, Post, Body, UseGuards, Request, Query } from '@nestjs/common';
 import { ProdutosService } from './produtos.service';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
