@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Request, Query, Param, Patch } from '@nestjs/common';
 import { ProdutosService } from './produtos.service';
 import { CreateProdutoDto } from './dto/create-produto.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -24,5 +24,12 @@ export class ProdutosController {
       return [];
     }
     return this.produtosService.findAll(restauranteId);
+  }
+
+    @Patch(':id')
+    @UseGuards(JwtAuthGuard, RolesGuard)
+    @Roles(Cargo.GERENTE)
+    update(@Param('id') id: string, @Body() updateData: any) {
+    return this.produtosService.update(id, updateData);
   }
 }

@@ -35,4 +35,11 @@ export class ProdutosService {
       },
     });
   }
+
+  async update(id: string, data: any) {
+    return this.prisma.produto.update({
+      where: { id },
+      data: data,
+    });
+  }
 }
