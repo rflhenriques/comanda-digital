@@ -5,10 +5,7 @@ import api from '../services/api';
 
 interface Categoria { id: string; nome: string; }
 interface Produto { id: string; nome: string; preco: number; descricao: string; categoria: Categoria; }
-interface ItemCarrinho extends Produto { 
-  quantidade: number; 
-  observacao: string; // ✅ Adicionado
-}
+interface ItemCarrinho extends Produto { quantidade: number; observacao: string; }
 
 export default function Cardapio() {
   const { numeroMesa } = useParams();
@@ -22,14 +19,18 @@ export default function Cardapio() {
   const restauranteId = "5d5748f8-f621-4d5d-b8e5-d363884627f1";
 
   useEffect(() => {
-    async function buscarDados() {
+    async function carregarInicial() {
       try {
-        const response = await api.get(`/produtos?restaurante_id=${restauranteId}`);
-        setProdutos(response.data);
-      } catch (error) { console.error(error); } finally { setCarregando(false); }
+        const resProd = await api.get(`/produtos?restaurante_id=${restauranteId}`);
+        setProdutos(resProd.data);
+      } catch (error) { 
+        console.error(error); 
+      } finally { 
+        setCarregando(false); 
+      }
     }
-    buscarDados();
-  }, []);
+    carregarInicial();
+  }, [restauranteId]);
 
   const produtosAgrupados = useMemo(() => {
     return produtos.reduce((acc: any, produto) => {
@@ -45,10 +46,8 @@ export default function Cardapio() {
   function adicionarAoCarrinho(p: Produto) {
     setCarrinho(prev => {
       const existe = prev.find(i => i.id === p.id);
-      if (existe) {
-        return prev.map(i => i.id === p.id ? { ...i, quantidade: i.quantidade + 1 } : i);
-      }
-      return [...prev, { ...p, quantidade: 1, observacao: "" }]; // ✅ Inicia observação vazia
+      if (existe) return prev.map(i => i.id === p.id ? { ...i, quantidade: i.quantidade + 1 } : i);
+      return [...prev, { ...p, quantidade: 1, observacao: "" }];
     });
   }
 
@@ -56,30 +55,31 @@ export default function Cardapio() {
     setCarrinho(prev => prev.map(i => i.id === id ? { ...i, quantidade: Math.max(0, i.quantidade - 1) } : i).filter(i => i.quantidade > 0));
   }
 
-  // ✅ Função para atualizar o texto da observação
   function atualizarObservacao(id: string, texto: string) {
-    setCarrinho(prev => prev.map(item => 
-      item.id === id ? { ...item, observacao: texto } : item
-    ));
+    setCarrinho(prev => prev.map(item => item.id === id ? { ...item, observacao: texto } : item));
   }
 
   const totalCarrinho = carrinho.reduce((acc, i) => acc + (Number(i.preco) * i.quantidade), 0);
   const totalItens = carrinho.reduce((acc, i) => acc + i.quantidade, 0);
 
   async function confirmarPedido() {
-    if (!numeroMesa) return alert("Mesa não identificada!");
     try {
+      // 🚀 Enviando direto o NÚMERO da mesa para o backend fazer a mágica!
       await api.post('/comandas', { 
         restaurante_id: restauranteId, 
-        mesa: Number(numeroMesa), 
+        mesa_numero: Number(numeroMesa),
         itens: carrinho.map(i => ({ 
             produto_id: i.id, 
             quantidade: i.quantidade,
-            observacao: i.observacao // ✅ Enviando observação para o banco
+            observacao: i.observacao 
         })) 
       });
-      setPedidoSucesso(true); setCarrinho([]); setTimeout(() => { setModalAberto(false); setPedidoSucesso(false); }, 3000);
-    } catch { alert("Erro ao enviar pedido."); }
+      setPedidoSucesso(true); 
+      setCarrinho([]); 
+      setTimeout(() => { setModalAberto(false); setPedidoSucesso(false); }, 3000);
+    } catch { 
+      alert("Erro ao enviar pedido. Verifique sua conexão com o servidor."); 
+    }
   }
 
   return (
@@ -152,12 +152,15 @@ export default function Cardapio() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center">
           <div className="bg-white w-full max-w-2xl rounded-t-[40px] p-8 max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
             {pedidoSucesso ? (
-              <div className="flex-1 flex flex-col items-center justify-center py-10"><CheckCircle2 size={60} className="text-green-500 mb-4" /><h2 className="text-3xl font-black text-gray-800">Enviado!</h2></div>
+              <div className="flex-1 flex flex-col items-center justify-center py-10">
+                <CheckCircle2 size={60} className="text-green-500 mb-4" />
+                <h2 className="text-3xl font-black text-gray-800 tracking-tighter">Enviado!</h2>
+              </div>
             ) : (
               <>
                 <div className="flex justify-between items-center mb-8">
                   <h2 className="text-3xl font-black text-gray-800 tracking-tighter">Meu Pedido</h2>
-                  <button onClick={() => setModalAberto(false)} className="bg-gray-100 p-2 rounded-xl text-gray-400"><X size={24} /></button>
+                  <button onClick={() => setModalAberto(false)} className="bg-gray-100 p-2 rounded-xl text-gray-400 hover:bg-gray-200 transition-colors"><X size={24} /></button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -169,13 +172,12 @@ export default function Cardapio() {
                           <p className="text-red-600 font-black">R$ {(Number(item.preco) * item.quantidade).toFixed(2)}</p>
                         </div>
                         <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm">
-                          <button onClick={() => removerDoCarrinho(item.id)} className="text-gray-300"><Minus size={20}/></button>
+                          <button onClick={() => removerDoCarrinho(item.id)} className="text-gray-300 hover:text-red-500 transition-colors"><Minus size={20}/></button>
                           <span className="font-black text-xl w-6 text-center">{item.quantidade}</span>
-                          <button onClick={() => adicionarAoCarrinho(item)} className="text-red-600"><Plus size={20}/></button>
+                          <button onClick={() => adicionarAoCarrinho(item)} className="text-red-600 hover:text-red-800 transition-colors"><Plus size={20}/></button>
                         </div>
                       </div>
                       
-                      {/* ✅ CAMPO DE OBSERVAÇÃO DENTRO DO ITEM */}
                       <div className="relative">
                         <MessageSquare className="absolute left-3 top-3 text-gray-300" size={16} />
                         <input 
@@ -195,7 +197,7 @@ export default function Cardapio() {
                     <span className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.2em]">Total Geral</span>
                     <span className="text-4xl font-black text-gray-800">R$ {totalCarrinho.toFixed(2)}</span>
                   </div>
-                  <button onClick={confirmarPedido} className="w-full bg-green-600 text-white p-6 rounded-[28px] font-black text-xl flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-green-100">
+                  <button onClick={confirmarPedido} className="w-full bg-green-600 text-white p-6 rounded-[28px] font-black text-xl flex items-center justify-center gap-3 active:scale-95 shadow-xl shadow-green-100 hover:bg-green-700 transition-colors">
                     <Send size={24} /> FINALIZAR PEDIDO
                   </button>
                 </div>

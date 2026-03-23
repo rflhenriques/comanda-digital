@@ -6,16 +6,35 @@ import { PrismaService } from '../prisma.service';
 export class ComandasService {
   constructor(private prisma: PrismaService) {}
 
-  // 1. ABRIR COMANDA (Forçado com 'any' para eliminar erros de tipo do VS Code)
+  // 1. ABRIR COMANDA (Com Auto-Criação de Mesas e 'any' para evitar erros no TS)
   async abrirComanda(dto: CreateComandaDto, restauranteId: string) {
-    if (dto.mesa_id) {
+    let idDaMesa = dto.mesa_id;
+
+    // 🚀 MÁGICA: Se não veio o ID da mesa, mas veio o número (ex: Mesa 1)
+    if (!idDaMesa && dto.mesa_numero) {
+      // Procura se a mesa já existe no banco
+      let mesa = await this.prisma.mesa.findFirst({
+        where: { restaurante_id: restauranteId, numero: dto.mesa_numero }
+      });
+
+      // Se não existe, cria ela automaticamente na hora!
+      if (!mesa) {
+        mesa = await this.prisma.mesa.create({
+          data: { numero: dto.mesa_numero, restaurante_id: restauranteId }
+        });
+      }
+      idDaMesa = mesa.id; // Pega o ID da mesa (nova ou existente)
+    }
+
+    // Verifica se a mesa já está ocupada com uma comanda aberta
+    if (idDaMesa) {
       const mesaOcupada = await this.prisma.comanda.findFirst({
-        where: { mesa_id: dto.mesa_id, status: 'ABERTA' },
+        where: { mesa_id: idDaMesa, status: 'ABERTA' },
       });
       if (mesaOcupada) throw new BadRequestException('Esta mesa já está ocupada!');
     }
 
-    // Criamos o objeto como 'any' para evitar que o TS reclame de campos opcionais
+    // Criamos o objeto como 'any' para evitar que o TS reclame
     const novaComanda: any = {
       status: 'ABERTA',
       restaurante: { connect: { id: restauranteId } },
@@ -29,8 +48,8 @@ export class ComandasService {
       }
     };
 
-    // Só adicionamos se existirem, sem risco de passar 'undefined'
-    if (dto.mesa_id) novaComanda.mesa = { connect: { id: dto.mesa_id } };
+    // Só adicionamos se existirem, usando o idDaMesa garantido
+    if (idDaMesa) novaComanda.mesa = { connect: { id: idDaMesa } };
     if (dto.cliente_id) novaComanda.cliente = { connect: { id: dto.cliente_id } };
 
     return this.prisma.comanda.create({
