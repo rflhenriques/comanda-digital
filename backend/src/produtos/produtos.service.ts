@@ -25,7 +25,7 @@ export class ProdutosService {
     return this.prisma.produto.findMany({
       where: {
         restaurante_id: restauranteId,
-        ativo: true,
+        ativo: true, // Aqui está a mágica: só busca os ativos!
       },
       include: {
         categoria: true,
@@ -40,6 +40,14 @@ export class ProdutosService {
     return this.prisma.produto.update({
       where: { id },
       data: data,
+    });
+  }
+
+  // 🚀 NOVA FUNÇÃO: Deletar (Exclusão Lógica)
+  async remove(id: string) {
+    return this.prisma.produto.update({
+      where: { id },
+      data: { ativo: false }, // Em vez de apagar, nós "escondemos" o produto
     });
   }
 }
