@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Request, Patch, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Patch, Param, UseGuards, Request } from '@nestjs/common';
 import { ComandasService } from './comandas.service';
 import { CreateComandaDto } from './dto/create-comanda.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -8,28 +8,29 @@ export class ComandasController {
   constructor(private readonly comandasService: ComandasService) {}
 
   @Post()
-  abrirComanda(@Body() createComandaDto: CreateComandaDto) {
-    const restauranteId = createComandaDto.restaurante_id;
-    return this.comandasService.abrirComanda(createComandaDto, restauranteId);
+  abrir(@Body() dto: CreateComandaDto) {
+    return this.comandasService.abrirComanda(dto, dto.restaurante_id);
   }
 
-  @UseGuards(JwtAuthGuard)
-  @Get('abertas')
-  listarAbertas(@Request() req) {
-    const restauranteId = req.user.restaurante_id;
+  @Get()
+  listar(@Query('restaurante_id') restauranteId: string) {
     return this.comandasService.listarAbertas(restauranteId);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/conta')
-  obterConta(@Param('id') id: string) {
+  conta(@Param('id') id: string) {
     return this.comandasService.obterConta(id);
+  }
+
+  @Patch(':id/concluir')
+  concluir(@Param('id') id: string) {
+    return this.comandasService.concluirPedido(id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id/fechar')
   fechar(@Param('id') id: string, @Request() req) {
-    const usuarioId = req.user.userId;
-    return this.comandasService.fecharComanda(id, usuarioId);
+    return this.comandasService.fecharComanda(id, req.user.userId);
   }
 }
