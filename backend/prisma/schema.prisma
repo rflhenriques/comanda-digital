@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -161,6 +161,7 @@ model Produto {
   id             String        @id @default(uuid())
   nome           String
   descricao      String?
+  imagem         String?       // 🚀 NOVO CAMPO DE IMAGEM ADICIONADO AQUI
   preco          Decimal       @db.Decimal(10, 2)
   ativo          Boolean       @default(true)
   criado_em      DateTime      @default(now())
