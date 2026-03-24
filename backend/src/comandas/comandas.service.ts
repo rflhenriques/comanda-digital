@@ -6,9 +6,7 @@ import { PrismaService } from '../prisma.service';
 export class ComandasService {
   constructor(private prisma: PrismaService) {}
 
-  // 1. ABRIR COMANDA (GERAR TICKET NOVO)
-  // 1. ABRIR OU ATUALIZAR COMANDA (COM TRAVA DE CPF)
-  // 1. ABRIR OU ATUALIZAR COMANDA (COM TRAVA DE CPF NO CHECK-IN)
+  // 1. ABRIR OU ATUALIZAR COMANDA (CHECK-IN E PEDIDO)
   async abrirComanda(dto: any, restauranteId: string) {
     let idDaMesa = dto.mesa_id;
 
@@ -25,7 +23,7 @@ export class ComandasService {
       idDaMesa = mesa.id;
     }
 
-    // 2. Lida com o Cliente
+    // 2. Localiza ou Cria o Cliente pelo CPF
     let clienteId = dto.cliente_id;
     if (dto.cpf && dto.nome) {
       let cliente = await this.prisma.cliente.findFirst({
@@ -39,26 +37,26 @@ export class ComandasService {
       clienteId = cliente.id;
     }
 
-    // 3. Verifica se a mesa já tem dono
+    // 3. 🛡️ VERIFICAÇÃO DE SEGURANÇA (O DONO DA MESA)
     if (idDaMesa) {
       const comandaAberta = await this.prisma.comanda.findFirst({
         where: { mesa_id: idDaMesa, status: 'ABERTA' }
       });
 
       if (comandaAberta) {
+        // Se a mesa tem dono e o CPF é diferente: TRAVA TOTAL.
         if (comandaAberta.cliente_id && clienteId && comandaAberta.cliente_id !== clienteId) {
           throw new BadRequestException('Esta mesa já está sendo utilizada por outro cliente.');
         }
 
-        // Se o CPF é o mesmo e ele mandou novos itens, atualiza.
-        // Se a lista de itens estiver vazia (só está fazendo login), retorna a comanda como está.
+        // Se o CPF for o mesmo, vamos atualizar. Se não tiver itens, apenas retornamos a comanda (Check-in)
         if (dto.itens && dto.itens.length > 0) {
           return this.prisma.comanda.update({
             where: { id: comandaAberta.id },
             data: {
               cliente_id: clienteId || comandaAberta.cliente_id,
               itens: {
-                create: dto.itens.map(item => ({
+                create: dto.itens.map((item: any) => ({
                   produto_id: item.produto_id,
                   quantidade: item.quantidade,
                   observacao: item.observacao || '',
@@ -66,20 +64,21 @@ export class ComandasService {
                 }))
               }
             },
-            include: { itens: true }
+            include: { mesa: true, itens: true }
           });
-        } else {
-          return comandaAberta; // Só fez o login de novo na mesa dele
         }
+        
+        // Retorno preventivo: Se já existe comanda e não tem itens novos, para aqui.
+        return comandaAberta;
       }
     }
 
-    // 4. Se a mesa estava VAZIA, CRIA A CONTA (Mesmo que não tenha itens ainda)
+    // 4. CRIAR NOVA COMANDA (Só chega aqui se a mesa estiver REALMENTE vazia)
     const novaComanda: any = {
       status: 'ABERTA',
       restaurante: { connect: { id: restauranteId } },
       itens: {
-        create: (dto.itens || []).map(item => ({ // 🚀 Agora aceita lista vazia sem quebrar!
+        create: (dto.itens || []).map((item: any) => ({
           produto_id: item.produto_id,
           quantidade: item.quantidade,
           observacao: item.observacao || '',
@@ -93,7 +92,7 @@ export class ComandasService {
 
     return this.prisma.comanda.create({
       data: novaComanda,
-      include: { itens: true }
+      include: { mesa: true, itens: true }
     });
   }
 
@@ -102,7 +101,6 @@ export class ComandasService {
     return this.prisma.comanda.findMany({
       where: { 
         restaurante_id: restauranteId, 
-        // 🚀 O BUG ESTAVA AQUI! Agora o backend manda as duas!
         status: { in: ['ABERTA', 'AGUARDANDO_PAGAMENTO'] } 
       },
       include: {
@@ -156,12 +154,13 @@ export class ComandasService {
     });
   }
 
-  // 5. FECHAR COMANDA E RECEBER PAGAMENTO
+  // 5. FECHAR COMANDA (Pagamento)
   async fecharComanda(id: string, usuarioId: string) {
     const comanda = await this.prisma.comanda.findUnique({
       where: { id },
       include: { 
         mesa: true,
+        restaurante: true,
         itens: { include: { produto: true } } 
       },
     });
@@ -175,26 +174,23 @@ export class ComandasService {
       where: { restaurante_id: comanda.restaurante_id, status: 'ABERTO' },
     });
     
-    // 🚀 MÁGICA DO CAIXA: Se não tem caixa aberto, o sistema abre um automaticamente!
     if (!caixa) {
       caixa = await this.prisma.caixa.create({
         data: {
           valor_inicial: 0,
           status: 'ABERTO',
           restaurante_id: comanda.restaurante_id,
-          usuario_id: usuarioId, // Vincula o caixa ao usuário que fez o login
+          usuario_id: usuarioId,
         }
       });
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Muda a comanda para PAGA
       await tx.comanda.update({
         where: { id },
         data: { status: 'PAGA', fechada_em: new Date() },
       });
 
-      // 2. Registra o dinheiro entrando no fluxo de caixa
       return await tx.movimentacaoCaixa.create({
         data: {
           caixa_id: caixa.id,
