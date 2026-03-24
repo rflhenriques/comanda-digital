@@ -7,34 +7,49 @@ export class ComandasService {
   constructor(private prisma: PrismaService) {}
 
   // 1. ABRIR COMANDA (Com Auto-Criação de Mesas e 'any' para evitar erros no TS)
+  // 1. ABRIR OU ATUALIZAR COMANDA
   async abrirComanda(dto: CreateComandaDto, restauranteId: string) {
     let idDaMesa = dto.mesa_id;
 
-    // 🚀 MÁGICA: Se não veio o ID da mesa, mas veio o número (ex: Mesa 1)
+    // 🚀 MÁGICA 1: Auto-criação de Mesas
     if (!idDaMesa && dto.mesa_numero) {
-      // Procura se a mesa já existe no banco
       let mesa = await this.prisma.mesa.findFirst({
         where: { restaurante_id: restauranteId, numero: dto.mesa_numero }
       });
-
-      // Se não existe, cria ela automaticamente na hora!
       if (!mesa) {
         mesa = await this.prisma.mesa.create({
           data: { numero: dto.mesa_numero, restaurante_id: restauranteId }
         });
       }
-      idDaMesa = mesa.id; // Pega o ID da mesa (nova ou existente)
+      idDaMesa = mesa.id;
     }
 
-    // Verifica se a mesa já está ocupada com uma comanda aberta
+    // 🚀 MÁGICA 2: Se a mesa já está ocupada, ADICIONA NA MESMA COMANDA!
     if (idDaMesa) {
-      const mesaOcupada = await this.prisma.comanda.findFirst({
+      const comandaAberta = await this.prisma.comanda.findFirst({
         where: { mesa_id: idDaMesa, status: 'ABERTA' },
       });
-      if (mesaOcupada) throw new BadRequestException('Esta mesa já está ocupada!');
+
+      if (comandaAberta) {
+        // Atualiza a comanda existente inserindo os novos itens
+        return this.prisma.comanda.update({
+          where: { id: comandaAberta.id },
+          data: {
+            itens: {
+              create: dto.itens.map(item => ({
+                produto_id: item.produto_id,
+                quantidade: item.quantidade,
+                observacao: item.observacao || '',
+                status_preparo: 'FILA' 
+              }))
+            }
+          },
+          include: { itens: true }
+        });
+      }
     }
 
-    // Criamos o objeto como 'any' para evitar que o TS reclame
+    // Se a mesa NÃO estava aberta, cria uma comanda nova do zero
     const novaComanda: any = {
       status: 'ABERTA',
       restaurante: { connect: { id: restauranteId } },
@@ -48,7 +63,6 @@ export class ComandasService {
       }
     };
 
-    // Só adicionamos se existirem, usando o idDaMesa garantido
     if (idDaMesa) novaComanda.mesa = { connect: { id: idDaMesa } };
     if (dto.cliente_id) novaComanda.cliente = { connect: { id: dto.cliente_id } };
 
