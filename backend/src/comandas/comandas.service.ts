@@ -6,8 +6,6 @@ import { PrismaService } from '../prisma.service';
 export class ComandasService {
   constructor(private prisma: PrismaService) {}
 
-  // 1. ABRIR COMANDA (Com Auto-Criação de Mesas e 'any' para evitar erros no TS)
-  // 1. ABRIR OU ATUALIZAR COMANDA
   // 1. ABRIR COMANDA (GERAR TICKET NOVO)
   async abrirComanda(dto: CreateComandaDto, restauranteId: string) {
     let idDaMesa = dto.mesa_id;
@@ -25,7 +23,7 @@ export class ComandasService {
       idDaMesa = mesa.id;
     }
 
-    // 🚀 MÁGICA: Sempre cria um NOVO Ticket na cozinha para a mesma mesa!
+    // Sempre cria um NOVO Ticket na cozinha para a mesma mesa!
     const novaComanda: any = {
       status: 'ABERTA',
       restaurante: { connect: { id: restauranteId } },
@@ -47,15 +45,19 @@ export class ComandasService {
     });
   }
 
-  // 2. LISTAR PARA COZINHA (Dashboard)
+  // 2. LISTAR PARA COZINHA E CAIXA
   async listarAbertas(restauranteId: string) {
     return this.prisma.comanda.findMany({
-      where: { restaurante_id: restauranteId, status: 'ABERTA' },
+      where: { 
+        restaurante_id: restauranteId, 
+        // 🚀 O BUG ESTAVA AQUI! Agora o backend manda as duas!
+        status: { in: ['ABERTA', 'AGUARDANDO_PAGAMENTO'] } 
+      },
       include: {
         mesa: true,
         itens: { include: { produto: true } }
       },
-      orderBy: { aberta_em: 'desc' } // 👈 Nome do seu schema
+      orderBy: { aberta_em: 'desc' } 
     });
   }
 
