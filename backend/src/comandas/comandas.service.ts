@@ -8,10 +8,11 @@ export class ComandasService {
 
   // 1. ABRIR COMANDA (Com Auto-Criação de Mesas e 'any' para evitar erros no TS)
   // 1. ABRIR OU ATUALIZAR COMANDA
+  // 1. ABRIR COMANDA (GERAR TICKET NOVO)
   async abrirComanda(dto: CreateComandaDto, restauranteId: string) {
     let idDaMesa = dto.mesa_id;
 
-    // 🚀 MÁGICA 1: Auto-criação de Mesas
+    // Auto-criação de Mesas
     if (!idDaMesa && dto.mesa_numero) {
       let mesa = await this.prisma.mesa.findFirst({
         where: { restaurante_id: restauranteId, numero: dto.mesa_numero }
@@ -24,32 +25,7 @@ export class ComandasService {
       idDaMesa = mesa.id;
     }
 
-    // 🚀 MÁGICA 2: Se a mesa já está ocupada, ADICIONA NA MESMA COMANDA!
-    if (idDaMesa) {
-      const comandaAberta = await this.prisma.comanda.findFirst({
-        where: { mesa_id: idDaMesa, status: 'ABERTA' },
-      });
-
-      if (comandaAberta) {
-        // Atualiza a comanda existente inserindo os novos itens
-        return this.prisma.comanda.update({
-          where: { id: comandaAberta.id },
-          data: {
-            itens: {
-              create: dto.itens.map(item => ({
-                produto_id: item.produto_id,
-                quantidade: item.quantidade,
-                observacao: item.observacao || '',
-                status_preparo: 'FILA' 
-              }))
-            }
-          },
-          include: { itens: true }
-        });
-      }
-    }
-
-    // Se a mesa NÃO estava aberta, cria uma comanda nova do zero
+    // 🚀 MÁGICA: Sempre cria um NOVO Ticket na cozinha para a mesma mesa!
     const novaComanda: any = {
       status: 'ABERTA',
       restaurante: { connect: { id: restauranteId } },
@@ -64,7 +40,6 @@ export class ComandasService {
     };
 
     if (idDaMesa) novaComanda.mesa = { connect: { id: idDaMesa } };
-    if (dto.cliente_id) novaComanda.cliente = { connect: { id: dto.cliente_id } };
 
     return this.prisma.comanda.create({
       data: novaComanda,
