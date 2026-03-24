@@ -1,20 +1,34 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+
+// Importando as páginas
 import Cardapio from './pages/Cardapio';
+import Dashboard from './pages/Dashboard'; 
+import Caixa from './pages/Caixa';
+import Login from './pages/Login'; // 🚀 Importamos a tela de Login aqui!
 import Gerenciamento from './pages/Gerenciamento';
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard'; // 🚀 IMPORTAMOS O DASHBOARD
+import Garcom from './pages/Garcom';
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/mesa/01" />} />
+      {/* Rota do Cliente */}
       <Route path="/mesa/:numeroMesa" element={<Cardapio />} />
       
-      <Route path="/login" element={<Login />} />
-      <Route path="/gerente" element={<Gerenciamento />} />
-      
-      {/* 🚀 NOVA ROTA PARA A COZINHA */}
+      {/* Rota da Cozinha */}
       <Route path="/cozinha" element={<Dashboard />} />
+      
+      {/* 🚀 A Rota do Login */}
+      <Route path="/login" element={<Login />} />
+      
+      {/* Rota do Caixa */}
+      <Route path="/caixa" element={<Caixa />} />
+
+      {/* Redirecionamento de segurança */}
+      <Route path="*" element={<Navigate to="/mesa/1" replace />} />
+
+      <Route path="/gerenciamento" element={<Gerenciamento />} />
+
+      <Route path="/garcom" element={<Garcom />} />
     </Routes>
   );
 }
