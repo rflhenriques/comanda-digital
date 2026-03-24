@@ -8,6 +8,7 @@ export class ComandasService {
 
   // 1. ABRIR COMANDA (GERAR TICKET NOVO)
   // 1. ABRIR OU ATUALIZAR COMANDA (COM TRAVA DE CPF)
+  // 1. ABRIR OU ATUALIZAR COMANDA (COM TRAVA DE CPF NO CHECK-IN)
   async abrirComanda(dto: any, restauranteId: string) {
     let idDaMesa = dto.mesa_id;
 
@@ -24,7 +25,7 @@ export class ComandasService {
       idDaMesa = mesa.id;
     }
 
-    // 2. Lida com o Cliente (Busca ou Cria pelo CPF)
+    // 2. Lida com o Cliente
     let clienteId = dto.cliente_id;
     if (dto.cpf && dto.nome) {
       let cliente = await this.prisma.cliente.findFirst({
@@ -38,43 +39,47 @@ export class ComandasService {
       clienteId = cliente.id;
     }
 
-    // 3. A REGRA DE OURO: Verifica se a mesa já tem dono!
+    // 3. Verifica se a mesa já tem dono
     if (idDaMesa) {
       const comandaAberta = await this.prisma.comanda.findFirst({
         where: { mesa_id: idDaMesa, status: 'ABERTA' }
       });
 
       if (comandaAberta) {
-        // Se a mesa já tem um cliente registrado, e é um CPF DIFERENTE tentando pedir: BLOQUEIA!
         if (comandaAberta.cliente_id && clienteId && comandaAberta.cliente_id !== clienteId) {
           throw new BadRequestException('Esta mesa já está sendo utilizada por outro cliente.');
         }
 
-        // Se for o mesmo CPF (dono da mesa), apenas junta os pedidos novos na mesma conta
-        return this.prisma.comanda.update({
-          where: { id: comandaAberta.id },
-          data: {
-            cliente_id: clienteId || comandaAberta.cliente_id,
-            itens: {
-              create: dto.itens.map(item => ({
-                produto_id: item.produto_id,
-                quantidade: item.quantidade,
-                observacao: item.observacao || '',
-                status_preparo: 'FILA'
-              }))
-            }
-          },
-          include: { itens: true }
-        });
+        // Se o CPF é o mesmo e ele mandou novos itens, atualiza.
+        // Se a lista de itens estiver vazia (só está fazendo login), retorna a comanda como está.
+        if (dto.itens && dto.itens.length > 0) {
+          return this.prisma.comanda.update({
+            where: { id: comandaAberta.id },
+            data: {
+              cliente_id: clienteId || comandaAberta.cliente_id,
+              itens: {
+                create: dto.itens.map(item => ({
+                  produto_id: item.produto_id,
+                  quantidade: item.quantidade,
+                  observacao: item.observacao || '',
+                  status_preparo: 'FILA'
+                }))
+              }
+            },
+            include: { itens: true }
+          });
+        } else {
+          return comandaAberta; // Só fez o login de novo na mesa dele
+        }
       }
     }
 
-    // 4. Se a mesa estava VAZIA, cria a conta vinculada ao CPF dele
+    // 4. Se a mesa estava VAZIA, CRIA A CONTA (Mesmo que não tenha itens ainda)
     const novaComanda: any = {
       status: 'ABERTA',
       restaurante: { connect: { id: restauranteId } },
       itens: {
-        create: dto.itens.map(item => ({
+        create: (dto.itens || []).map(item => ({ // 🚀 Agora aceita lista vazia sem quebrar!
           produto_id: item.produto_id,
           quantidade: item.quantidade,
           observacao: item.observacao || '',
