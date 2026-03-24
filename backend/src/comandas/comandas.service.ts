@@ -104,7 +104,7 @@ export class ComandasService {
     });
   }
 
-  // 5. FECHAR COMANDA (Gerente)
+  // 5. FECHAR COMANDA E RECEBER PAGAMENTO
   async fecharComanda(id: string, usuarioId: string) {
     const comanda = await this.prisma.comanda.findUnique({
       where: { id },
@@ -119,24 +119,37 @@ export class ComandasService {
     const subtotal = comanda.itens.reduce((acc, item) => acc + (Number(item.produto.preco) * item.quantidade), 0);
     const totalGeral = subtotal * 1.10;
 
-    const caixa = await this.prisma.caixa.findFirst({
+    let caixa = await this.prisma.caixa.findFirst({
       where: { restaurante_id: comanda.restaurante_id, status: 'ABERTO' },
     });
-    if (!caixa) throw new BadRequestException('Não há um caixa aberto!');
+    
+    // 🚀 MÁGICA DO CAIXA: Se não tem caixa aberto, o sistema abre um automaticamente!
+    if (!caixa) {
+      caixa = await this.prisma.caixa.create({
+        data: {
+          valor_inicial: 0,
+          status: 'ABERTO',
+          restaurante_id: comanda.restaurante_id,
+          usuario_id: usuarioId, // Vincula o caixa ao usuário que fez o login
+        }
+      });
+    }
 
     return this.prisma.$transaction(async (tx) => {
+      // 1. Muda a comanda para PAGA
       await tx.comanda.update({
         where: { id },
         data: { status: 'PAGA', fechada_em: new Date() },
       });
 
+      // 2. Registra o dinheiro entrando no fluxo de caixa
       return await tx.movimentacaoCaixa.create({
         data: {
           caixa_id: caixa.id,
           usuario_id: usuarioId,
           valor: totalGeral,
           tipo: 'ENTRADA',
-          descricao: `Recebimento Mesa ${comanda.mesa?.numero || 'Balcão'}`,
+          descricao: `Recebimento Mesa ${comanda.mesa?.numero || 'Avulso'}`,
         },
       });
     });
